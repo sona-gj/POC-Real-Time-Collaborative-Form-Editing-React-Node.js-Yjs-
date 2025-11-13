@@ -1,0 +1,22 @@
+{
+  "name": "collaborative-forms-backend",
+  "version": "1.0.0",
+  "description": "Yjs WebSocket server for real-time form collaboration",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node server.ts"
+  },
+  "dependencies": {
+    "y-websocket": "^1.5.0",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  }
+}
+
