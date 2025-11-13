@@ -1,10 +1,34 @@
+import { useRef } from 'react';
 import { useYjsForm } from '../hooks/useYjsForm';
+import ActiveEditorsBadge from './ActiveEditorsBadge';
+import CursorIndicator from './CursorIndicator';
 
 export default function CollaborativeForm({ roomName, userId }) {
-  const { formData, updateField, isConnected, awareness } = useYjsForm(roomName, userId);
+  const { 
+    formData, 
+    updateField, 
+    updateCursorPosition,
+    clearCursorPosition,
+    isConnected, 
+    awareness,
+    myClientId
+  } = useYjsForm(roomName, userId);
+
+  // Refs for input fields to calculate cursor position
+  const nameInputRef = useRef(null);
+  const emailInputRef = useRef(null);
+
+  // Unified handler: updates field value and cursor position
+  const handleInput = (fieldName) => (e) => {
+    updateField(fieldName, e.target.value);
+    updateCursorPosition(fieldName, e.target.selectionStart || 0);
+  };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
+    <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto', position: 'relative' }}>
+      {/* Active Editors Badge */}
+      <ActiveEditorsBadge awareness={awareness} myClientId={myClientId} />
+
       <div style={{ marginBottom: '20px' }}>
         <span style={{ 
           padding: '5px 10px', 
@@ -19,32 +43,54 @@ export default function CollaborativeForm({ roomName, userId }) {
 
       <h2>Collaborative Form</h2>
 
-      {/* Input Field 1 */}
-      <div style={{ marginBottom: '15px' }}>
+      {/* Input Field 1 with cursor tracking */}
+      <div style={{ marginBottom: '15px', position: 'relative' }}>
         <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
           Name:
         </label>
-        <input
-          type="text"
-          value={formData.name || ''}
-          onChange={(e) => updateField('name', e.target.value)}
-          style={{ width: '100%', padding: '8px', fontSize: '14px' }}
-          placeholder="Enter your name"
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            ref={nameInputRef}
+            type="text"
+            value={formData.name || ''}
+            onInput={handleInput('name')}
+            onFocus={handleInput('name')}
+            onBlur={clearCursorPosition}
+            style={{ width: '100%', padding: '8px', fontSize: '14px', position: 'relative' }}
+            placeholder="Enter your name"
+          />
+          <CursorIndicator 
+            awareness={awareness} 
+            fieldName="name" 
+            myClientId={myClientId}
+            inputRef={nameInputRef}
+          />
+        </div>
       </div>
 
-      {/* Input Field 2 */}
-      <div style={{ marginBottom: '15px' }}>
+      {/* Input Field 2 with cursor tracking */}
+      <div style={{ marginBottom: '15px', position: 'relative' }}>
         <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
           Email:
         </label>
-        <input
-          type="email"
-          value={formData.email || ''}
-          onChange={(e) => updateField('email', e.target.value)}
-          style={{ width: '100%', padding: '8px', fontSize: '14px' }}
-          placeholder="Enter your email"
-        />
+        <div style={{ position: 'relative' }}>
+          <input
+            ref={emailInputRef}
+            type="email"
+            value={formData.email || ''}
+            onInput={handleInput('email')}
+            onFocus={handleInput('email')}
+            onBlur={clearCursorPosition}
+            style={{ width: '100%', padding: '8px', fontSize: '14px', position: 'relative' }}
+            placeholder="Enter your email"
+          />
+          <CursorIndicator 
+            awareness={awareness} 
+            fieldName="email" 
+            myClientId={myClientId}
+            inputRef={emailInputRef}
+          />
+        </div>
       </div>
 
       {/* Dropdown 1 */}
@@ -102,21 +148,6 @@ export default function CollaborativeForm({ roomName, userId }) {
       >
         Submit Form
       </button>
-
-      {/* Awareness Display */}
-      {Object.keys(awareness).length > 0 && (
-        <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
-          <strong>Active Users:</strong>
-          <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-            {Object.entries(awareness).map(([clientId, state]) => (
-              <li key={clientId}>
-                {state.user?.name || clientId}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }
-

@@ -1,6 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createYjsDocument, getFormMap } from '../yjs-setup';
 
+// Generate persistent color for user based on userId
+function getUserColor(userId) {
+  const colors = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', 
+    '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'
+  ];
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
+
 /**
  * Custom hook for collaborative form editing with Yjs
  * 
@@ -13,12 +26,16 @@ export function useYjsForm(roomName, userId = 'user-' + Math.random().toString(3
   const [formData, setFormData] = useState({});
   const [isConnected, setIsConnected] = useState(false);
   const [awareness, setAwareness] = useState({});
+  const [myClientId, setMyClientId] = useState(null);
   const formMapRef = useRef(null);
+  const awarenessRef = useRef(null);
+  const wsProviderRef = useRef(null);
 
   useEffect(() => {
     const { ydoc, wsProvider, idbProvider } = createYjsDocument(roomName, wsUrl);
     const formMap = getFormMap(ydoc);
     formMapRef.current = formMap;
+    wsProviderRef.current = wsProvider;
 
     // Get initial form data from Yjs document
     const initialData = {};
@@ -45,15 +62,27 @@ export function useYjsForm(roomName, userId = 'user-' + Math.random().toString(3
 
     // Set up awareness (who's editing what)
     const awareness = wsProvider.awareness;
-    awareness.setLocalStateField('user', { id: userId, name: userId });
+    awarenessRef.current = awareness;
+    
+    // Set initial awareness state with user info and color
+    const userColor = getUserColor(userId);
+    awareness.setLocalStateField('user', { 
+      id: userId, 
+      name: userId,
+      color: userColor
+    });
+    
+    setMyClientId(awareness.clientID);
 
     // Listen for awareness changes
     const updateAwareness = () => {
       const states = {};
       awareness.getStates().forEach((state, clientId) => {
-        if (clientId !== awareness.clientID) {
-          states[clientId] = state;
-        }
+        states[clientId] = {
+          ...state,
+          clientId,
+          isMe: clientId === awareness.clientID
+        };
       });
       setAwareness(states);
     };
@@ -78,11 +107,31 @@ export function useYjsForm(roomName, userId = 'user-' + Math.random().toString(3
     }
   }, []);
 
+  // Update cursor position (call when user focuses/edits a field)
+  const updateCursorPosition = useCallback((fieldName, cursorPosition) => {
+    if (awarenessRef.current) {
+      awarenessRef.current.setLocalStateField('cursor', {
+        field: fieldName,
+        position: cursorPosition
+      });
+    }
+  }, []);
+
+  // Clear cursor position (call when user blurs a field)
+  const clearCursorPosition = useCallback(() => {
+    if (awarenessRef.current) {
+      awarenessRef.current.setLocalStateField('cursor', null);
+    }
+  }, []);
+
   return {
     formData,
     updateField,
+    updateCursorPosition,
+    clearCursorPosition,
     isConnected,
-    awareness
+    awareness,
+    myClientId
   };
 }
 
